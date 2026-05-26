@@ -1,0 +1,267 @@
+{
+  "name": "smartfare-tracker-n8n",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"origin\": \"EZE\",\n  \"destination\": \"YYZ\",\n  \"price\": 1350\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        128,
+        0
+      ],
+      "id": "813fac8d-1b28-470e-989a-507577e60ad5",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      origin: \"EZE\",\n      destination: \"YYZ\",\n      airline: \"Air Canada\",\n      price: Math.floor(Math.random() * 1200) + 700,\n      timestamp: new Date().toISOString(),\n      alert_type: \"Logged flight search result\"\n    }\n  },\n  {\n    json: {\n      origin: \"EZE\",\n      destination: \"YYZ\",\n      airline: \"LATAM\",\n      price: Math.floor(Math.random() * 1200) + 700,\n      timestamp: new Date().toISOString(),\n      alert_type: \"Logged flight search result\"\n    }\n  },\n  {\n    json: {\n      origin: \"EZE\",\n      destination: \"YWG\",\n      airline: \"United\",\n      price: Math.floor(Math.random() * 1200) + 700,\n      timestamp: new Date().toISOString(),\n      alert_type: \"Logged flight search result\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        0
+      ],
+      "id": "0026bc4d-f05c-42a2-859b-d40ad06d0f7d",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dd18e26d-bcff-4926-a309-b164fa0de1c5",
+              "leftValue": "={{ $json.price }}",
+              "rightValue": 1000,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        640,
+        -112
+      ],
+      "id": "2c8f0d51-f4e7-4373-bda2-970f067f1dec",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "chatId": "TELEGRAM_CHAT_ID",
+        "text": "=🚨 Cheap Flight Detected\n\n✈ Airline: {{$json.airline}}\n📍 Route: {{$json.origin}} → {{$json.destination}}\n💵 Price: USD {{$json.price}}\n\n⏰ {{$now}}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        -304
+      ],
+      "id": "72ecc0e2-0c9d-490b-92ba-1f41ad1d9583",
+      "name": "Send a text message",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "SHEET_GID_OR_NAME",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Airline": "={{$json.airline}}",
+            "Price": "={{$json.price}}",
+            "Origin": "={{$json.origin}}",
+            "Destination": "={{$json.destination}}",
+            "Timestamp": "={{$now}}",
+            "Alert_type": "Logged flight search result"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Origin",
+              "displayName": "Origin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Destination",
+              "displayName": "Destination",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Airline",
+              "displayName": "Airline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Price",
+              "displayName": "Price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Alert_type",
+              "displayName": "Alert_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        640,
+        96
+      ],
+      "id": "37b0b431-d5ef-4d4d-a817-3896eea9c13b",
+      "name": "Append row in sheet",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -80,
+        0
+      ],
+      "id": "8d1a6ea2-d0af-4b3a-b022-bf8ceb5359dd",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        []
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "note": "Sanitized export. Configure credentials locally in n8n after import."
+  },
+  "tags": []
+}
