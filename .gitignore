@@ -1,0 +1,23 @@
+# n8n local data
+n8n_data/
+
+# Environment files
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# Secrets / credentials
+credentials/
+secrets/
+*.key
+*.pem
