@@ -50,3 +50,7 @@ Proveedor simulado de vuelos
    ├── Registro histórico en Google Sheets
    └── IF precio < umbral
          └── Alerta por Telegram
+
+## Vista del Workflow
+
+![n8n workflow](screenshots/n8n-workflow.png)
