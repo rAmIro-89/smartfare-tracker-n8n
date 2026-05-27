@@ -14,10 +14,17 @@ n8n automation for monitoring flight prices, logging results in Google Sheets, a
 ## Current MVP
 
 - Runs automatically every 1 hour.
-- Generates simulated flight prices.
+- Uses a mock flight provider to generate simulated flight prices.
 - Records all results in Google Sheets.
 - Sends Telegram alerts only for cheap flights.
 - Uses a decoupled architecture so real APIs can be integrated later.
+
+## Real API Integration - WIP
+
+- The current stable MVP stays in mock mode for academic delivery and portfolio clarity.
+- The experimental branch will replace the mock Code Node with an HTTP Request Node.
+- The goal is to connect a real flight API without changing the Google Sheets and Telegram downstream flow.
+- Secrets, API keys and provider credentials must stay outside the repository.
 
 ## Recorded Fields
 
@@ -44,9 +51,14 @@ Do not commit tokens or secrets to the repository.
 ```text
 Schedule Trigger
       ↓
-Code Node (JavaScript)
+Code Node (JavaScript) - mock provider
       ↓
 Simulated Flight Provider
    ├── Google Sheets historical log
    └── IF price < threshold
          └── Telegram alert
+```
+
+## Workflow Preview
+
+![n8n workflow](screenshots/n8n-workflow.png)

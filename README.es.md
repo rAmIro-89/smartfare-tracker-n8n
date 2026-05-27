@@ -14,10 +14,17 @@ Automatización en n8n para monitorear precios de vuelos, registrar resultados e
 ## MVP actual
 
 - Corre automáticamente cada 1 hora.
-- Genera precios simulados de vuelos.
+- Usa un mock provider para generar precios simulados de vuelos.
 - Registra todos los resultados en Google Sheets.
 - Envía alertas por Telegram solo para vuelos baratos.
 - Usa una arquitectura desacoplada para futura integración con APIs reales.
+
+## Real API Integration - WIP
+
+- El MVP estable se mantiene en modo mock para la entrega académica y el portfolio.
+- La rama experimental reemplazará el Code Node mock por un HTTP Request Node.
+- El objetivo es conectar una API real de vuelos sin cambiar el flujo hacia Google Sheets y Telegram.
+- Secretos, API keys y credenciales de proveedores no deben subirse al repositorio.
 
 ## Campos registrados
 
@@ -44,12 +51,13 @@ No subir tokens ni secretos al repositorio.
 ```text
 Schedule Trigger
       ↓
-Nodo Code (JavaScript)
+Nodo Code (JavaScript) - mock provider
       ↓
 Proveedor simulado de vuelos
    ├── Registro histórico en Google Sheets
    └── IF precio < umbral
          └── Alerta por Telegram
+```
 
 ## Vista del Workflow
 
