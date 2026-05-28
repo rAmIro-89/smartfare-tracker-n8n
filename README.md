@@ -18,6 +18,9 @@ n8n automation for monitoring flight prices, logging results in Google Sheets, a
 - Records all results in Google Sheets.
 - Sends Telegram alerts only for cheap flights.
 - Uses a decoupled architecture so real APIs can be integrated later.
+- Stable `main` stays in mock mode for academic delivery.
+- Experimental branch `feature/real-flight-api` contains a working Aviationstack integration.
+- The real API workflow is WIP and should not replace the stable delivery yet.
 
 ## Real API Integration - WIP
 
@@ -25,6 +28,7 @@ n8n automation for monitoring flight prices, logging results in Google Sheets, a
 - The experimental branch will replace the mock Code Node with an HTTP Request Node.
 - The goal is to connect a real flight API without changing the Google Sheets and Telegram downstream flow.
 - Secrets, API keys and provider credentials must stay outside the repository.
+- Validated Aviationstack flow is documented in the experimental branch, but the mock MVP remains the portfolio baseline.
 
 ## Recorded Fields
 

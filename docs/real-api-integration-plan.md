@@ -83,6 +83,23 @@ Proposed steps:
 
 This approach reduces risk because only the provider layer changes.
 
+## Validated Real API Integration
+
+The experimental branch has already validated the Aviationstack flow end to end.
+
+- API provider: Aviationstack
+- endpoint: `/v1/flights`
+- authentication: `access_key` query parameter
+- result: 100 records returned
+- transformation: normalized with a JavaScript Code Node
+- persistence: 100 rows appended to Google Sheets
+- alerting: IF price < 1000 + Limit 3 + Telegram
+- pattern: log everything, alert selectively
+
+Current validated shape:
+
+Schedule Trigger → HTTP Request → Normalize Aviationstack Response → Google Sheets logging → IF price < 1000 → Limit 3 → Telegram alerts
+
 ## Deliverable Goal
 
 By the end of the experimental branch, the project should have:
