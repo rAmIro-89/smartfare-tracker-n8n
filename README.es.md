@@ -1,3 +1,23 @@
+# SmartFare Tracker — SerpAPI Google Flights (rama: feature/serpapi-google-flights)
+
+Esta rama experimenta con SerpAPI (Google Flights) como proveedor de precios reales para rutas como EZE → YWG.
+
+Notas:
+- Esta rama es experimental y reemplaza el proveedor mock por un flujo HTTP Request hacia SerpAPI para descubrimiento de tarifas.
+- NO reemplazar `main` con este workflow; `main` sigue siendo el MVP estable académico que usa datos mock.
+
+Qué incluye esta rama:
+- `workflows/smartfare-tracker-serpapi-wip.sanitized.json` — export sanitizado de n8n (sin claves/secretos).
+- `docs/serpapi-google-flights-plan.md` — plan técnico y parámetros.
+- `.env.example` actualizado con placeholders para SerpAPI.
+
+Roles de los proveedores (resumen):
+- Aviationstack: datos operativos de vuelos (horarios, estado) — usado en otros experimentos.
+- SerpAPI (Google Flights): precios, duración, escalas e itinerarios — usado aquí para tarifas.
+
+Uso:
+- Configurar credenciales de SerpAPI en n8n o en `.env` local (no subir secretos).
+- Importar el workflow sanitizado en n8n y configurar credenciales localmente.
 # SmartFare Tracker n8n
 
 Automatización en n8n para monitorear precios de vuelos, registrar resultados en Google Sheets y enviar alertas por Telegram cuando un vuelo cumple una regla de precio barato.
