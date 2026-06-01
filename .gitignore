@@ -16,6 +16,9 @@ Thumbs.db
 tmp/
 temp/
 
+# VS Code workspace settings
+.vscode/
+
 # Secrets / credentials
 credentials/
 secrets/
