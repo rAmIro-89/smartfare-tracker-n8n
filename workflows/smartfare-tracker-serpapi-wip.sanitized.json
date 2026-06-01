@@ -1,261 +1,350 @@
 {
-    "name": "smartfare-tracker-serpapi-wip",
-    "nodes": [
-        {
-            "parameters": {
-                "rule": {
-                    "interval": [
-                        {
-                            "field": "hours",
-                            "hoursInterval": 6
-                        }
-                    ]
-                }
+  "name": "serpapi-google-flights",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dd18e26d-bcff-4926-a309-b164fa0de1c5",
+              "leftValue": "={{ $json.price }}",
+              "rightValue": 900,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
             },
-            "type": "n8n-nodes-base.scheduleTrigger",
-            "typeVersion": 1.3,
-            "position": [
-                -192,
-                -128
-            ],
-            "id": "sched-1",
-            "name": "Schedule Trigger"
+            {
+              "id": "129cd50f-4b60-4c1d-8a40-757c1556eb18",
+              "leftValue": "={{ $json.stops }}",
+              "rightValue": 2,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            },
+            {
+              "id": "c2ee1e5f-1138-459d-8f53-ff54fde1f13f",
+              "leftValue": "={{ $json.duration_minutes }}",
+              "rightValue": 1500,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
         },
-        {
-            "parameters": {
-                "url": "SERPAPI_BASE_URL",
-                "sendQuery": true,
-                "queryParameters": {
-                    "parameters": [
-                        {
-                            "name": "engine",
-                            "value": "SERPAPI_ENGINE"
-                        },
-                        {
-                            "name": "api_key",
-                            "value": "SERPAPI_API_KEY"
-                        },
-                        {
-                            "name": "departure_id",
-                            "value": "SERPAPI_DEPARTURE_ID"
-                        },
-                        {
-                            "name": "arrival_id",
-                            "value": "SERPAPI_ARRIVAL_ID"
-                        },
-                        {
-                            "name": "outbound_date",
-                            "value": "SERPAPI_OUTBOUND_DATE"
-                        },
-                        {
-                            "name": "type",
-                            "value": "SERPAPI_TYPE"
-                        },
-                        {
-                            "name": "currency",
-                            "value": "SERPAPI_CURRENCY"
-                        },
-                        {
-                            "name": "hl",
-                            "value": "SERPAPI_HL"
-                        },
-                        {
-                            "name": "gl",
-                            "value": "SERPAPI_GL"
-                        }
-                    ]
-                },
-                "options": {}
-            },
-            "type": "n8n-nodes-base.httpRequest",
-            "typeVersion": 4.4,
-            "position": [
-                80,
-                -128
-            ],
-            "id": "http-1",
-            "name": "HTTP Request"
-        },
-        {
-            "parameters": {
-                "jsCode": "const resultSets = [$json.best_flights || [], $json.other_flights || [], $json.search_results || []].flat();\nconst flights = resultSets.length ? resultSets : [$json];\n\nreturn flights.map(item => ({\n  json: {\n    timestamp: new Date().toISOString(),\n    origin: item.departure_id || item.origin || 'EZE',\n    destination: item.arrival_id || item.destination || 'YWG',\n    airline: item.airline || item.carrier || null,\n    flight_number: item.flight_number || item.flight || null,\n    price: item.price || item.total_price || item.price?.value || null,\n    total_duration: item.total_duration || item.duration || item.duration_minutes || null,\n    stops: item.stops ?? item.number_of_stops ?? null,\n    departure_time: item.departure_time || item.departure || null,\n    arrival_time: item.arrival_time || item.arrival || null,\n    provider: 'SerpAPI Google Flights',\n    alert_type: 'SerpAPI flight result'\n  }\n}));"
-            },
-            "type": "n8n-nodes-base.code",
-            "typeVersion": 2,
-            "position": [
-                320,
-                -128
-            ],
-            "id": "code-1",
-            "name": "Normalize SerpAPI Response"
-        },
-        {
-            "parameters": {
-                "operation": "append",
-                "documentId": {
-                    "__rl": true,
-                    "value": "GOOGLE_SHEET_ID",
-                    "mode": "id"
-                },
-                "sheetName": {
-                    "__rl": true,
-                    "value": "gid=0",
-                    "mode": "list"
-                },
-                "columns": {
-                    "mappingMode": "defineBelow",
-                    "value": {
-                        "Airline": "={{$json.airline}}",
-                        "Arrival_time": "={{$json.arrival_time}}",
-                        "Departure_time": "={{$json.departure_time}}",
-                        "Destination": "={{$json.destination}}",
-                        "Flight_number": "={{$json.flight_number}}",
-                        "Origin": "={{$json.origin}}",
-                        "Price": "={{$json.price}}",
-                        "Provider": "={{$json.provider}}",
-                        "Stops": "={{$json.stops}}",
-                        "Timestamp": "={{$now}}",
-                        "Total_duration": "={{$json.total_duration}}",
-                        "Alert_type": "SerpAPI flight result"
-                    },
-                    "attemptToConvertTypes": false
-                },
-                "options": {}
-            },
-            "type": "n8n-nodes-base.googleSheets",
-            "typeVersion": 4.7,
-            "position": [
-                640,
-                96
-            ],
-            "id": "gs-1",
-            "name": "Append row in sheet"
-        },
-        {
-            "parameters": {
-                "conditions": {
-                    "options": {
-                        "version": 3
-                    },
-                    "conditions": [
-                        {
-                            "leftValue": "={{ $json.price }}",
-                            "rightValue": "=DEFAULT_MAX_PRICE",
-                            "operator": {
-                                "type": "number",
-                                "operation": "lt"
-                            }
-                        }
-                    ]
-                }
-            },
-            "type": "n8n-nodes-base.if",
-            "typeVersion": 2.3,
-            "position": [
-                624,
-                -128
-            ],
-            "id": "if-1",
-            "name": "If"
-        },
-        {
-            "parameters": {
-                "maxItems": 3
-            },
-            "type": "n8n-nodes-base.limit",
-            "typeVersion": 1,
-            "position": [
-                832,
-                -240
-            ],
-            "id": "limit-1",
-            "name": "Limit"
-        },
-        {
-            "parameters": {
-                "chatId": "TELEGRAM_CHAT_ID",
-                "text": "=🚨 Cheap Flight (SerpAPI)\n✈ {{$json.airline}} — {{$json.origin}} → {{$json.destination}} — ${{$json.price}}"
-            },
-            "type": "n8n-nodes-base.telegram",
-            "typeVersion": 1.2,
-            "position": [
-                1008,
-                -240
-            ],
-            "id": "tg-1",
-            "name": "Send a text message"
+        "options": {
+          "ignoreCase": false
         }
-    ],
-    "connections": {
-        "Schedule Trigger": {
-            "main": [
-                [
-                    {
-                        "node": "HTTP Request",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        -128
+      ],
+      "id": "fbe039b4-bf97-406f-83e5-d9a5ce18ae35",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "chatId": "TELEGRAM_CHAT_ID",
+        "text": "=🚨 Cheap Flight Detected\n\n✈ Airline: {{$json.airline}}\n📍 Route: {{$json.origin}} → {{$json.destination}}\n💵 Price: USD {{$json.price}}\n🕒 Duration: {{$json.duration_minutes}} min\n🧳 Stops: {{$json.stops}}\n\n⏰ {{$now}}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1008,
+        -240
+      ],
+      "id": "c1443902-5ba5-49b0-b182-3a4f59273bbf",
+      "name": "Send a text message"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID",
+          "mode": "id"
         },
-        "HTTP Request": {
-            "main": [
-                [
-                    {
-                        "node": "Normalize SerpAPI Response",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/GOOGLE_SHEET_ID/edit#gid=0"
         },
-        "Normalize SerpAPI Response": {
-            "main": [
-                [
-                    {
-                        "node": "If",
-                        "type": "main",
-                        "index": 0
-                    },
-                    {
-                        "node": "Append row in sheet",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Airline": "={{$json.airline}}",
+            "Price": "={{$json.price}}",
+            "Origin": "={{$json.origin}}",
+            "Destination": "={{$json.destination}}",
+            "Timestamp": "={{$now}}",
+            "Alert_type": "Logged flight search result"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Origin",
+              "displayName": "Origin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Destination",
+              "displayName": "Destination",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Airline",
+              "displayName": "Airline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Price",
+              "displayName": "Price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Alert_type",
+              "displayName": "Alert_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
         },
-        "If": {
-            "main": [
-                [
-                    {
-                        "node": "Limit",
-                        "type": "main",
-                        "index": 0
-                    }
-                ],
-                []
-            ]
-        },
-        "Limit": {
-            "main": [
-                [
-                    {
-                        "node": "Send a text message",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        640,
+        96
+      ],
+      "id": "a5aaac00-3b5f-43aa-8c8f-8f1c54bfa32c",
+      "name": "Append row in sheet"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
         }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -192,
+        -128
+      ],
+      "id": "64c3b687-5088-4a50-8be8-c7b55758d61a",
+      "name": "Schedule Trigger"
     },
-    "active": false,
-    "settings": {
-        "executionOrder": "v1",
-        "binaryMode": "separate"
+    {
+      "parameters": {
+        "url": "SERPAPI_BASE_URL",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "engine",
+              "value": "SERPAPI_ENGINE"
+            },
+            {
+              "name": "api_key",
+              "value": "SERPAPI_API_KEY"
+            },
+            {
+              "name": "departure_id",
+              "value": "SERPAPI_DEPARTURE_ID"
+            },
+            {
+              "name": "arrival_id",
+              "value": "SERPAPI_ARRIVAL_ID"
+            },
+            {
+              "name": "outbound_date",
+              "value": "SERPAPI_OUTBOUND_DATE"
+            },
+            {
+              "name": "type",
+              "value": "SERPAPI_TYPE"
+            },
+            {
+              "name": "currency",
+              "value": "SERPAPI_CURRENCY"
+            },
+            {
+              "name": "hl",
+              "value": "SERPAPI_HL"
+            },
+            {
+              "name": "gl",
+              "value": "SERPAPI_GL"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        80,
+        -128
+      ],
+      "id": "e7b0264b-4a8b-4753-8dfa-217ec5b7ae29",
+      "name": "HTTP Request"
     },
-    "meta": {
-        "note": "Sanitized export for SerpAPI; configure credentials in n8n locally."
+    {
+      "parameters": {
+        "maxItems": 3
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        832,
+        -240
+      ],
+      "id": "c5f883f4-85ae-4467-a67d-bd75a8b7d244",
+      "name": "Limit"
     },
-    "tags": []
+    {
+      "parameters": {
+        "jsCode": "const bestFlights = $json.best_flights || [];\nconst otherFlights = $json.other_flights || [];\nconst allFlights = [...bestFlights, ...otherFlights];\n\nreturn allFlights.map(option => {\n  const segments = option.flights || [];\n  const firstSegment = segments[0] || {};\n  const lastSegment = segments[segments.length - 1] || {};\n\n  return {\n    json: {\n      timestamp: new Date().toISOString(),\n      provider: 'SerpAPI Google Flights',\n      origin: firstSegment.departure_airport?.id || null,\n      destination: lastSegment.arrival_airport?.id || null,\n      airline: firstSegment.airline || null,\n      flight_number: firstSegment.flight_number || null,\n      departure_time: firstSegment.departure_airport?.time || null,\n      arrival_time: lastSegment.arrival_airport?.time || null,\n      total_duration: option.total_duration || null,\n      stops: segments.length > 0 ? segments.length - 1 : null,\n      price: option.price || null,\n      currency: 'USD',\n      alert_type: 'Real fare search result'\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -128
+      ],
+      "id": "e5080c24-e01a-4c39-a8f8-a9c836eca576",
+      "name": "Normalize SerApi Response"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        []
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize SerApi Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize SerApi Response": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "note": "Sanitized export for SerpAPI; configure credentials in n8n locally."
+  },
+  "tags": []
 }
