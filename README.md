@@ -1,19 +1,16 @@
 # SmartFare Tracker — SerpAPI Google Flights (branch: feature/serpapi-google-flights)
 
-This branch experiments with SerpAPI (Google Flights) as a real pricing provider for routes such as EZE → YWG.
+This branch documents the SerpAPI Google Flights real-fare search path for routes such as EZE → YWG.
 
 Notes:
-- This branch is experimental and replaces the mock provider with a SerpAPI-based HTTP Request flow for price discovery.
+- This branch is experimental and focused exclusively on SerpAPI Google Flights.
 - Do NOT replace `main` with this workflow; `main` remains the stable academic MVP using mock data.
 
 What this branch includes:
 - `workflows/smartfare-tracker-serpapi-wip.sanitized.json` — sanitized n8n export (no keys/secrets).
-- `docs/serpapi-google-flights-plan.md` — technical plan and parameters.
-- Updated `.env.example` with SerpAPI placeholders.
-
-Provider roles (short):
-- Aviationstack: operational flight data (schedules, status) — used in other experiments.
-- SerpAPI (Google Flights): fares, durations, stops and itineraries — used here for pricing.
+- `docs/serpapi-google-flights-plan.md` — SerpAPI-specific plan and parameters.
+- `docs/repository-architecture.md` — overall branch and roadmap architecture.
+- Updated `.env.example` with SerpAPI placeholders only.
 
 Usage:
 - Configure SerpAPI credentials in n8n or local `.env` (do not commit secrets).
@@ -39,8 +36,6 @@ n8n automation for monitoring flight prices, logging results in Google Sheets, a
 - Sends Telegram alerts only for cheap flights.
 - Uses a decoupled architecture so real APIs can be integrated later.
 - Stable `main` stays in mock mode for academic delivery.
-- Experimental branch `feature/real-flight-api` contains a working Aviationstack integration.
-- The real API workflow is WIP and should not replace the stable delivery yet.
 
 ## Real API Integration - WIP
 
@@ -48,7 +43,6 @@ n8n automation for monitoring flight prices, logging results in Google Sheets, a
 - The experimental branch will replace the mock Code Node with an HTTP Request Node.
 - The goal is to connect a real flight API without changing the Google Sheets and Telegram downstream flow.
 - Secrets, API keys and provider credentials must stay outside the repository.
-- Validated Aviationstack flow is documented in the experimental branch, but the mock MVP remains the portfolio baseline.
 
 ## Recorded Fields
 

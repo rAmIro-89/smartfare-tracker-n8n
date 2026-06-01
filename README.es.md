@@ -1,19 +1,16 @@
 # SmartFare Tracker — SerpAPI Google Flights (rama: feature/serpapi-google-flights)
 
-Esta rama experimenta con SerpAPI (Google Flights) como proveedor de precios reales para rutas como EZE → YWG.
+Esta rama documenta el camino de tarifas reales con SerpAPI Google Flights para rutas como EZE → YWG.
 
 Notas:
-- Esta rama es experimental y reemplaza el proveedor mock por un flujo HTTP Request hacia SerpAPI para descubrimiento de tarifas.
+- Esta rama es experimental y está enfocada exclusivamente en SerpAPI Google Flights.
 - NO reemplazar `main` con este workflow; `main` sigue siendo el MVP estable académico que usa datos mock.
 
 Qué incluye esta rama:
 - `workflows/smartfare-tracker-serpapi-wip.sanitized.json` — export sanitizado de n8n (sin claves/secretos).
-- `docs/serpapi-google-flights-plan.md` — plan técnico y parámetros.
-- `.env.example` actualizado con placeholders para SerpAPI.
-
-Roles de los proveedores (resumen):
-- Aviationstack: datos operativos de vuelos (horarios, estado) — usado en otros experimentos.
-- SerpAPI (Google Flights): precios, duración, escalas e itinerarios — usado aquí para tarifas.
+- `docs/serpapi-google-flights-plan.md` — plan y parámetros específicos de SerpAPI.
+- `docs/repository-architecture.md` — arquitectura general de ramas y roadmap.
+- `.env.example` actualizado con placeholders exclusivos de SerpAPI.
 
 Uso:
 - Configurar credenciales de SerpAPI en n8n o en `.env` local (no subir secretos).
@@ -39,8 +36,6 @@ Automatización en n8n para monitorear precios de vuelos, registrar resultados e
 - Envía alertas por Telegram solo para vuelos baratos.
 - Usa una arquitectura desacoplada para futura integración con APIs reales.
 - `main` estable se mantiene en modo mock para la entrega académica.
-- La rama experimental `feature/real-flight-api` contiene una integración funcional con Aviationstack.
-- El workflow real sigue siendo WIP y no debe reemplazar todavía la entrega estable.
 
 ## Real API Integration - WIP
 
@@ -48,7 +43,6 @@ Automatización en n8n para monitorear precios de vuelos, registrar resultados e
 - La rama experimental reemplazará el Code Node mock por un HTTP Request Node.
 - El objetivo es conectar una API real de vuelos sin cambiar el flujo hacia Google Sheets y Telegram.
 - Secretos, API keys y credenciales de proveedores no deben subirse al repositorio.
-- La integración validada con Aviationstack queda documentada en la rama experimental, pero el MVP mock sigue siendo la base del portfolio.
 
 ## Campos registrados
 

@@ -2,52 +2,66 @@
 
 ## Objetivo
 
-Integrar SerpAPI (Google Flights) como proveedor de tarifas para el caso EZE → YWG, obteniendo precios, duración y número de escalas.
+Integrar SerpAPI (Google Flights) como proveedor real de tarifas para EZE → YWG, con salida orientada a precios, tiempos, escalas e itinerarios.
 
 ## Parámetros usados
 
 - `engine=google_flights`
-- `api_key`: provided via `SERPAPI_API_KEY` (do not commit)
-- `q` / origin/destination/date parameters as required (see examples in n8n HTTP Request node)
-- currency, max_price, max_stops, max_duration_minutes (see `.env.example`)
+- `api_key` via `SERPAPI_API_KEY` (never commit)
+- `departure_id=EZE`
+- `arrival_id=YWG`
+- `outbound_date` via `SERPAPI_OUTBOUND_DATE`
+- `type=2` for one-way
+- `currency=USD`
+- `hl=en`
+- `gl=us`
 
 ## Estructura de respuesta (resumen)
 
-SerpAPI returns a JSON with results list; each item typically contains:
-- price (amount, currency)
-- airline
-- duration (minutes or formatted)
-- number of stops
-- itinerary / legs with origin/destination and times
+SerpAPI typically returns a JSON response with flight options and itinerary data. The normalized workflow should extract:
+
+- `price`
+- `total_duration`
+- `stops`
+- `origin`
+- `destination`
+- `airline`
+- `flight_number`
+- `departure_time`
+- `arrival_time`
+- `provider`
 
 ## Campos normalizados (n8n Code Node)
 
-- `timestamp` — execution time ISO
-- `origin` — IATA code (EZE)
-- `destination` — IATA code (YWG)
+- `timestamp` — ISO execution time
+- `origin` — `EZE`
+- `destination` — `YWG`
 - `airline` — carrier name
-- `price` — numeric amount (USD)
-- `stops` — integer
-- `duration_minutes` — integer
-- `itinerary` — summary string
-- `alert_type` — e.g., "SerpAPI flight result"
+- `flight_number` — flight identifier
+- `price` — numeric amount in USD
+- `total_duration` — total trip duration
+- `stops` — number of stops
+- `departure_time` — normalized departure time
+- `arrival_time` — normalized arrival time
+- `provider` — `SerpAPI Google Flights`
+- `alert_type` — e.g. `SerpAPI flight result`
 
 ## Filtros de negocio
 
-- `price <= DEFAULT_MAX_PRICE` (alerts)
+- `price <= DEFAULT_MAX_PRICE`
 - `stops <= DEFAULT_MAX_STOPS`
-- `duration_minutes <= DEFAULT_MAX_DURATION_MINUTES`
-- The workflow pattern is: log everything; alert selectively (IF + Limit)
+- `total_duration <= DEFAULT_MAX_DURATION_MINUTES`
+- Log everything, alert selectively.
 
 ## Cost / Free tier limitations
 
-- SerpAPI has rate limits and possible costs per request for Google Flights engine.
-- Mitigations: reduce frequency, cache results, limit fields, sample responses.
+- SerpAPI can impose request limits and usage-based costs.
+- Mitigations: lower frequency, cache results, and keep the workflow focused on demo-sized queries.
 
 ## Secret management
 
-- Do NOT commit `SERPAPI_API_KEY` or any tokens.
-- Store in n8n credentials or in a local `.env` excluded by `.gitignore`.
+- Do NOT commit `SERPAPI_API_KEY` or any other token.
+- Keep secrets only in n8n credentials or local `.env` files excluded by `.gitignore`.
 
 ## Import notes
 
