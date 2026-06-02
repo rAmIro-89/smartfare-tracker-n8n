@@ -45,11 +45,11 @@
         -192
       ],
       "id": "356875d4-185c-4830-b5ff-0299ea99ae3b",
-      "name": "Normalize SerApi Response"
+      "name": "Normalize SerAPI Response"
     },
     {
       "parameters": {
-        "jsCode": "return items.map(item => {\n  const flight = item.json;\n\n  let score = 100;\n  const reasons = [];\n\n  if (flight.price > 900) {\n    score -= 40;\n    reasons.push(\"Price above preferred budget\");\n  }\n\n  if (flight.stops > 2) {\n    score -= 20;\n    reasons.push(\"Too many stops\");\n  }\n\n  if (flight.duration_minutes > 1500) {\n    score -= 30;\n    reasons.push(\"Duration exceeds preferred maximum\");\n  }\n\n  score = Math.max(0, Math.min(100, score));\n\n  return {\n    json: {\n      ...flight,\n      score,\n      alert: score >= 75,\n      scoring_reasons: reasons\n    }\n  };\n});"
+        "jsCode": "return items.map(item => {\n  const flight = item.json;\n\n  let score = 100;\n  const reasons = [];\n  const pros = [];\n  const cons = [];\n\n  if (flight.price > 900) {\n    score -= 40;\n    reasons.push(\"Price above preferred budget\");\n    cons.push(\"Price > 900 USD\");\n  } else if (flight.price <= 750) {\n    reasons.push(\"Excellent price\");\n    pros.push(\"Price < 750 USD\");\n  } else {\n    reasons.push(\"Price within budget\");\n    pros.push(\"Price <= 900 USD\");\n  }\n\n  if (flight.stops > 2) {\n    score -= 20;\n    reasons.push(\"Too many stops\");\n    cons.push(\"Stops > 2\");\n  } else {\n    pros.push(\"Stops within limit\");\n  }\n\n  if (flight.duration_minutes > 1500) {\n    score -= 30;\n    reasons.push(\"Duration exceeds preferred maximum\");\n    cons.push(\"Duration > 1500 min\");\n  } else {\n    pros.push(\"Duration within limit\");\n  }\n\n  score = Math.max(0, Math.min(100, score));\n\n  return {\n    json: {\n      ...flight,\n      score,\n      alert: score >= 75,\n      reason: reasons.join(\"; \"),\n      pros,\n      cons,\n      scoring_reasons: reasons\n    }\n  };\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -107,7 +107,7 @@
         "messages": {
           "values": [
             {
-              "content": "=You are a flight analyst.\n\nIMPORTANT:\n- Do not use markdown.\n- Do not use triple backticks.\n- Return raw JSON only.\n- Return exactly one JSON object.\n\nFlight:\nOrigin: {{$json.origin}}\nDestination: {{$json.destination}}\nAirline: {{$json.airline}}\nPrice: {{$json.price}}\nStops: {{$json.stops}}\nDuration minutes: {{$json.duration_minutes}}\n\nBusiness scoring result:\nScore: {{$json.score}}\nAlert: {{$json.alert}}\nScoring reasons: {{$json.scoring_reasons}}\n\nExplain the decision in a concise way.\n\nReturn exactly this JSON:\n\n{\n  \"origin\": \"{{$json.origin}}\",\n  \"destination\": \"{{$json.destination}}\",\n  \"airline\": \"{{$json.airline}}\",\n  \"price\": {{$json.price}},\n  \"stops\": {{$json.stops}},\n  \"duration_minutes\": {{$json.duration_minutes}},\n  \"score\": {{$json.score}},\n  \"alert\": {{$json.alert}},\n  \"reason\": \"\",\n  \"pros\": [],\n  \"cons\": []\n}"
+              "content": "=You are a flight analyst.\n\nIMPORTANT:\n- Do not use markdown.\n- Do not use triple backticks.\n- Return raw JSON only.\n- Return exactly one JSON object.\n- Keep score and alert unchanged from the business scoring result.\n\nFlight:\nOrigin: {{$json.origin}}\nDestination: {{$json.destination}}\nAirline: {{$json.airline}}\nPrice: {{$json.price}}\nStops: {{$json.stops}}\nDuration minutes: {{$json.duration_minutes}}\n\nBusiness scoring result:\nScore: {{$json.score}}\nAlert: {{$json.alert}}\nScoring reasons: {{$json.scoring_reasons}}\n\nReturn a concise explanation of the decision.\n\nReturn exactly this JSON:\n\n{\n  \"score\": {{$json.score}},\n  \"alert\": {{$json.alert}},\n  \"reason\": \"\",\n  \"pros\": [],\n  \"cons\": []\n}"
             }
           ]
         },
@@ -123,14 +123,14 @@
       "name": "Ollama - Message a model",
       "credentials": {
         "ollamaApi": {
-          "id": "8e10zGHqexHkTk3i",
-          "name": "Ollama account"
+          "id": "OLLAMA_CREDENTIAL_ID_PLACEHOLDER",
+          "name": "Ollama account placeholder"
         }
       }
     },
     {
       "parameters": {
-        "chatId": "7062981287",
+        "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
         "text": "==🚨 Cheap Flight Detected\n\n✈ Airline: {{$json.airline}}\n📍 Route: {{$json.origin}} → {{$json.destination}}\n💵 Price: USD {{$json.price}}\n🛑 Stops: {{$json.stops}}\n⏱ Duration: {{$json.duration_minutes}} min\n⭐ Score: {{$json.score}}/100\n\n🧠 Reason:\n{{$json.reason}}\n\n✅ Pros:\n{{$json.pros}}\n\n⚠️ Cons:\n{{$json.cons}}\n\n⏰ {{$now}}",
         "additionalFields": {}
       },
@@ -142,11 +142,10 @@
       ],
       "id": "dcc109fe-1014-467a-91db-3ec661048374",
       "name": "Telegram Alert",
-      "webhookId": "598e6bc8-e861-461d-bec3-0eb6cc80675c",
       "credentials": {
         "telegramApi": {
-          "id": "wg9syf98zGVZ0s34",
-          "name": "Telegram account"
+          "id": "TELEGRAM_CREDENTIAL_ID_PLACEHOLDER",
+          "name": "Telegram account placeholder"
         }
       }
     },
@@ -158,35 +157,35 @@
           "parameters": [
             {
               "name": "engine",
-              "value": "google_flights"
+              "value": "={{$env.SERPAPI_ENGINE || 'google_flights'}}"
             },
             {
               "name": "api_key",
-              "value": "169b2d486fa80a99231bfd92f7e5278eb8f930d56f18f1f052d4d4dbcf371d08"
+              "value": "={{$env.SERPAPI_API_KEY}}"
             },
             {
               "name": "departure_id",
-              "value": "EZE"
+              "value": "={{$env.SERPAPI_DEPARTURE_ID || 'EZE'}}"
             },
             {
               "name": "arrival_id",
-              "value": "YWG"
+              "value": "={{$env.SERPAPI_ARRIVAL_ID || 'YWG'}}"
             },
             {
               "name": "outbound_date",
-              "value": "2026-08-01"
+              "value": "={{$env.SERPAPI_OUTBOUND_DATE || '2026-08-01'}}"
             },
             {
               "name": "type",
-              "value": "2"
+              "value": "={{$env.SERPAPI_TYPE || '2'}}"
             },
             {
               "name": "currency",
-              "value": "USD"
+              "value": "={{$env.SERPAPI_CURRENCY || 'USD'}}"
             },
             {
               "name": "hl",
-              "value": "en"
+              "value": "={{$env.SERPAPI_HL || 'en'}}"
             }
           ]
         },
@@ -199,7 +198,7 @@
         -192
       ],
       "id": "533662c3-2b60-4a05-a401-85e85be93bdc",
-      "name": "SerAPII Google Flights"
+      "name": "SerpAPI Google Flights"
     },
     {
       "parameters": {
@@ -207,14 +206,14 @@
         "documentId": {
           "__rl": true,
           "mode": "id",
-          "value": "1H1Uw4e98_zxvV2BX_X_xfWIHiBTkxLB-AG5fxDT2U8A"
+          "value": "={{$env.GOOGLE_SHEETS_DOCUMENT_ID}}"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "Hoja 1",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1H1Uw4e98_zxvV2BX_X_xfWIHiBTkxLB-AG5fxDT2U8A/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/GOOGLE_SHEETS_DOCUMENT_ID/edit#gid=0"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -359,8 +358,8 @@
       "name": "Append row in sheet",
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "ZbjQEfU5i4AxmgII",
-          "name": "Google Sheets account"
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID_PLACEHOLDER",
+          "name": "Google Sheets account placeholder"
         }
       }
     },
@@ -399,7 +398,7 @@
       "main": [
         [
           {
-            "node": "SerAPII Google Flights",
+            "node": "SerpAPI Google Flights",
             "type": "main",
             "index": 0
           }
@@ -417,7 +416,7 @@
         ]
       ]
     },
-    "Normalize SerApi Response": {
+    "Normalize SerAPI Response": {
       "main": [
         [
           {
@@ -478,11 +477,11 @@
         []
       ]
     },
-    "SerAPII Google Flights": {
+    "SerpAPI Google Flights": {
       "main": [
         [
           {
-            "node": "Normalize SerApi Response",
+            "node": "Normalize SerAPI Response",
             "type": "main",
             "index": 0
           }
@@ -518,11 +517,8 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "887b3bb4-0bf8-44fa-9774-bcb7f8b3dd0d",
   "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "a4e126581353d7b0f86dc3dfe8d171b2f040ea67035327b5172c2b6cfe86d1af"
+    "templateCredsSetupCompleted": true
   },
-  "id": "W7cZS5SB8dHvfJkN",
   "tags": []
 }
