@@ -1,0 +1,11 @@
+{
+    "origin": "EZE",
+    "destination": "YWG",
+    "airline": "Delta",
+    "price": 934,
+    "stops": 2,
+    "duration_minutes": 1756,
+    "departure_time": "2026-06-01 20:10",
+    "arrival_time": "2026-06-02 23:26",
+    "alert_threshold": 75
+}
