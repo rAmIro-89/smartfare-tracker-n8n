@@ -53,4 +53,4 @@ Proveedor simulado de vuelos
 
 ## Vista del Workflow
 
-![n8n workflow](screenshots/n8n-workflow.png)
+![n8n workflow](screenshots/workflow-architecture.png)
