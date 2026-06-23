@@ -1,0 +1,651 @@
+{
+  "name": "google-form-serpapi-ollama-google-flights",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1072,
+        -176
+      ],
+      "id": "fded7721-4b50-43bf-9355-bab7767b8cb8",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "maxItems": 3
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        -272
+      ],
+      "id": "d761dfe2-125d-415f-8d07-873a4d10a94b",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $json;\n\nconst bestFlights = $json.best_flights || [];\nconst otherFlights = $json.other_flights || [];\n\nconst allFlights = [...bestFlights, ...otherFlights];\n\nreturn allFlights.map(option => {\n  const segments = option.flights || [];\n  const firstSegment = segments[0] || {};\n  const lastSegment = segments[segments.length - 1] || {};\n\n  return {\n    json: {\n      user_name: config.user_name,\n      telegram_chat_id: config.telegram_chat_id,\n      max_price: Number(config.max_price),\n      excellent_price: Number(config.excellent_price),\n      max_stops: Number(config.max_stops),\n      max_duration_minutes: Number(config.max_duration_minutes),\n      alert_threshold: Number(config.alert_threshold),\n\n      timestamp: new Date().toISOString(),\n      provider: \"SerpAPI Google Flights\",\n      origin: firstSegment.departure_airport?.id || null,\n      destination: lastSegment.arrival_airport?.id || null,\n      airline: firstSegment.airline || null,\n      flight_number: firstSegment.flight_number || null,\n      departure_time: firstSegment.departure_airport?.time || null,\n      arrival_time: lastSegment.arrival_airport?.time || null,\n      duration_minutes: option.total_duration || null,\n      stops: segments.length > 0 ? segments.length - 1 : null,\n      layovers: segments\n        .slice(0, -1)\n        .map(segment => segment.arrival_airport?.id)\n        .filter(Boolean),\n      layovers_text: segments\n        .slice(0, -1)\n        .map(segment => segment.arrival_airport?.id)\n        .filter(Boolean)\n        .join(\" → \"),\n      price: option.price || null,\n      currency: config.currency || \"USD\",\n      alert_type: \"Real fare search result\"\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        -160
+      ],
+      "id": "ad1ec49e-5044-439e-9352-af1a5a2b8b00",
+      "name": "Normalize SerApi Response",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const flight = item.json;\n\n  const maxPrice = Number(flight.max_price);\n  const maxStops = Number(flight.max_stops);\n  const maxDuration = Number(flight.max_duration_minutes);\n  const threshold = Number(flight.alert_threshold);\n\n  let score = 100;\n  const reasons = [];\n\n  if (flight.price > maxPrice) {\n    score -= 40;\n    reasons.push(`Price above preferred budget (${flight.price} > ${maxPrice})`);\n  }\n\n  if (flight.stops > maxStops) {\n    score -= 20;\n    reasons.push(`Too many stops (${flight.stops} > ${maxStops})`);\n  }\n\n  if (flight.duration_minutes > maxDuration) {\n    score -= 30;\n    reasons.push(`Duration exceeds preferred maximum (${flight.duration_minutes} > ${maxDuration})`);\n  }\n\n  score = Math.max(0, Math.min(100, score));\n\n  return {\n    json: {\n      ...flight,\n      score,\n      alert: score >= threshold,\n      scoring_reasons: reasons\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -160
+      ],
+      "id": "bccc624c-2788-4049-bf07-55798be8c5f6",
+      "name": "Business Scoring Code Node"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "341300d6-a36f-4cfa-bca2-85cefbf8b54a",
+              "leftValue": "={{$json.alert}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": false
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        -240
+      ],
+      "id": "ec1f1024-beb2-490c-96c8-3f7d337f2696",
+      "name": "IF alert"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "qwen2.5:7b",
+          "mode": "list",
+          "cachedResultName": "qwen2.5:7b"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a flight analyst.\n\nIMPORTANT:\n- Do not use markdown.\n- Do not use triple backticks.\n- Return raw JSON only.\n- Return exactly one JSON object.\n\nFlight:\nOrigin: {{$json.origin}}\nDestination: {{$json.destination}}\nAirline: {{$json.airline}}\nPrice: {{$json.price}}\nStops: {{$json.stops}}\nDuration minutes: {{$json.duration_minutes}}\n\nBusiness scoring result:\nScore: {{$json.score}}\nAlert: {{$json.alert}}\nScoring reasons: {{$json.scoring_reasons}}\n\nExplain the decision in a concise way.\n\nReturn exactly this JSON:\n\n{\n  \"origin\": \"{{$json.origin}}\",\n  \"destination\": \"{{$json.destination}}\",\n  \"airline\": \"{{$json.airline}}\",\n  \"price\": {{$json.price}},\n  \"stops\": {{$json.stops}},\n  \"duration_minutes\": {{$json.duration_minutes}},\n  \"score\": {{$json.score}},\n  \"alert\": {{$json.alert}},\n  \"reason\": \"\",\n  \"pros\": [],\n  \"cons\": []\n}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.ollama",
+      "typeVersion": 1,
+      "position": [
+        800,
+        -448
+      ],
+      "id": "cecb6215-8555-4801-a558-736d2808a97e",
+      "name": "Ollama - Message a model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "==🚨 Cheap Flight Detected\n\n✈ Airline: {{$json.airline}}\n📍 Route: {{$json.origin}} → {{$json.destination}}\n💵 Price: USD {{$json.price}}\n🛑 Stops: {{$json.stops}}\n🔁 Layovers: {{$json.layovers_text || \"Direct flight\"}}\n⏱ Duration: {{$json.duration_minutes}} min\n⭐ Score: {{$json.score}}/100\n\n🧠 Reason:\n{{$json.reason}}\n\n✅ Pros:\n{{$json.pros}}\n\n⚠️ Cons:\n{{$json.cons}}\n\n⏰ {{$now}}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1792,
+        -272
+      ],
+      "id": "b8ab588b-91da-4093-adcd-d8b2a1efadb1",
+      "name": "Telegram Alert",
+      "webhookId": "",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://serpapi.com/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "engine",
+              "value": "google_flights"
+            },
+            {
+              "name": "api_key",
+              "value": "={{$credentials.serpApi.apiKey}}"
+            },
+            {
+              "name": "departure_id",
+              "value": "={{$json.origin}}"
+            },
+            {
+              "name": "arrival_id",
+              "value": "={{$json.destination}}"
+            },
+            {
+              "name": "outbound_date",
+              "value": "={{$json.outbound_date}}"
+            },
+            {
+              "name": "type",
+              "value": "2"
+            },
+            {
+              "name": "currency",
+              "value": "={{$json.currency}}"
+            },
+            {
+              "name": "hl",
+              "value": "en"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -368,
+        -64
+      ],
+      "id": "7c53177c-2a1d-424d-98b0-b81cc57c92f6",
+      "name": "SerAPII Google Flights"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "flight_history",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/xxxxxxxxxxxxxxxxxxx/edit#gid=444576967"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{$now}}",
+            "Origin": "={{$json.origin}}",
+            "Destination": "={{$json.destination}}",
+            "Airline": "={{$json.airline}}",
+            "Price": "={{$json.price}}",
+            "Alert_type": "Logged flight search result",
+            "Duration_minutes": "={{$json.duration_minutes}}",
+            "Stops": "={{$json.stops}}",
+            "Score": "={{$json.score}}",
+            "Alert": "={{$json.alert}}",
+            "Scoring_reasons": "={{$json.scoring_reasons.join(\", \")}}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Origin",
+              "displayName": "Origin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Destination",
+              "displayName": "Destination",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Airline",
+              "displayName": "Airline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Price",
+              "displayName": "Price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Alert_type",
+              "displayName": "Alert_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Duration_minutes",
+              "displayName": "Duration_minutes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Stops",
+              "displayName": "Stops",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Alert",
+              "displayName": "Alert",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Scoring_reasons",
+              "displayName": "Scoring_reasons",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        624,
+        0
+      ],
+      "id": "f8d894c1-6326-409f-bef7-6a262b91937e",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const raw = item.json.content || item.json.response || \"\";\n\n  const cleaned = String(raw)\n    .replace(/^```json\\s*/i, \"\")\n    .replace(/^```\\s*/i, \"\")\n    .replace(/```$/i, \"\")\n    .trim();\n\n  let parsed;\n\n  try {\n    parsed = JSON.parse(cleaned);\n  } catch (error) {\n    parsed = {\n      reason: cleaned,\n      pros: [],\n      cons: [\"Could not parse Ollama response as JSON\"]\n    };\n  }\n\n  return {\n    json: parsed\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        -448
+      ],
+      "id": "96650c9d-8000-47fd-993d-c2f46a565d0e",
+      "name": "Parse Ollama JSON"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1344,
+        -272
+      ],
+      "id": "adb2e6c2-4e01-4d3d-9fa6-3338096e6b48",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const seen = new Set();\n\nreturn items.filter(item => {\n  const f = item.json;\n\n  const key = [\n    f.airline,\n    f.flight_number,\n    f.departure_time,\n    f.arrival_time,\n    f.price\n  ].join(\"|\");\n\n  if (seen.has(key)) {\n    return false;\n  }\n\n  seen.add(key);\n  return true;\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        -160
+      ],
+      "id": "61c695b7-c555-4001-88f4-173c18b1b665",
+      "name": "Remove Duplicate Flights"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "smartfare_tracker_config",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/xxxxxxxxxxxxxxxxxxx/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 444576967,
+          "mode": "list",
+          "cachedResultName": "config",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/xxxxxxxxxxxxxxxxxxx/edit#gid=444576967"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -864,
+        -176
+      ],
+      "id": "2b0cebba-4ef7-4b8e-ba55-6c84a6e0bf3b",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function normalizeDate(value) {\n  const raw = String(value || \"\").trim();\n\n  // Si ya viene YYYY-MM-DD, lo dejamos igual\n  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(raw)) {\n    return raw;\n  }\n\n  // Convierte D/MM/YYYY o DD/MM/YYYY a YYYY-MM-DD\n  const match = raw.match(/^(\\d{1,2})\\/(\\d{1,2})\\/(\\d{4})$/);\n  if (match) {\n    const day = match[1].padStart(2, \"0\");\n    const month = match[2].padStart(2, \"0\");\n    const year = match[3];\n    return `${year}-${month}-${day}`;\n  }\n\n  return raw;\n}\n\nreturn items.map(item => {\n  const row = item.json;\n\n  const enabledRaw = String(row[\"Enable Flight Alerts\"] || \"\").trim().toLowerCase();\n\n  return {\n    json: {\n      enabled: enabledRaw === \"yes\",\n      user_name: row[\"User Name\"],\n      telegram_chat_id: row[\"Telegram Chat ID\"],\n      origin: String(row[\"Origin Airport\"] || \"\").trim().toUpperCase(),\n      destination: String(row[\"Destination Airport\"] || \"\").trim().toUpperCase(),\n      outbound_date: normalizeDate(row[\"Outbound Date\"]),\n      max_price: Number(row[\"Maximum Price (USD)\"]),\n      excellent_price: Math.round(Number(row[\"Maximum Price (USD)\"]) * 0.85),\n      max_stops: Number(row[\"Maximum Stops\"]),\n      max_duration_minutes: 1500,\n      alert_threshold: Number(row[\"Alert Threshold\"]) || 75,\n      currency: \"USD\",\n      source: \"google_form\"\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -624,
+        -176
+      ],
+      "id": "287cb710-6548-482f-89fb-71d77b0ed510",
+      "name": "Normalize Form Config"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -160,
+        -160
+      ],
+      "id": "a76d12ce-50dd-4630-a384-022ddf07a29d",
+      "name": "Merge2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize SerApi Response": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicate Flights",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Business Scoring Code Node": {
+      "main": [
+        [
+          {
+            "node": "IF alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF alert": {
+      "main": [
+        [
+          {
+            "node": "Ollama - Message a model",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        []
+      ]
+    },
+    "Ollama - Message a model": {
+      "main": [
+        [
+          {
+            "node": "Parse Ollama JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Alert": {
+      "main": [
+        []
+      ]
+    },
+    "SerAPII Google Flights": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Parse Ollama JSON": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicate Flights": {
+      "main": [
+        [
+          {
+            "node": "Business Scoring Code Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Normalize Form Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Form Config": {
+      "main": [
+        [
+          {
+            "node": "SerAPII Google Flights",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Normalize SerApi Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "6632236e-ef3a-490e-a855-5781c352698e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a4e126581353d7b0f86dc3dfe8d171b2f040ea67035327b5172c2b6cfe86d1af"
+  },
+  "id": "lfUOTykdiiMuRP7t",
+  "tags": []
+}
