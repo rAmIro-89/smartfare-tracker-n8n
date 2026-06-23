@@ -8,6 +8,7 @@ n8n_data/
 # OS files
 .DS_Store
 Thumbs.db
+~$*
 
 # Logs
 *.log
